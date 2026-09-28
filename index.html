@@ -431,8 +431,8 @@
         <h2 style="display:flex; align-items:center; gap:8px; font-size:1.1rem; color:var(--danger);">
           <i data-lucide="alert-triangle"></i> Excluir Peça
         </h2>
-        <button class="btn btn-secondary" onclick="closeConfirmModal()" style="padding:4px 8px;">
-          <i data-lucide="x"></i>
+        <button type="button" class="btn btn-secondary" onclick="fecharModalConfirmacao()">
+            <i data-lucide="x"></i>
         </button>
       </div>
 
@@ -442,7 +442,7 @@
       </div>
 
       <div style="display:flex; justify-content:flex-end; gap:12px;">
-        <button class="btn btn-secondary" onclick="closeConfirmModal()">Cancelar</button>
+        <button type="button" class="btn btn-secondary" onclick="fecharModalConfirmacao()">Cancelar</button>
         <button class="btn" id="btnConfirmDelete" style="background-color:var(--danger); color:#fff;">
           <i data-lucide="trash-2" style="width:16px;"></i> Sim, Excluir
         </button>
