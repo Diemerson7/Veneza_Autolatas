@@ -26,9 +26,11 @@ function updateDbStatusBadge(isOnline) {
 
   if (isOnline) {
     badge.className = 'badge-status online';
+    badge.style.color = '#ffffff';
     badge.innerHTML = '<span class="dot" style="background-color: #10b981; display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px;"></span> Supabase';
   } else {
     badge.className = 'badge-status offline';
+    badge.style.color = '#ef4444';
     badge.innerHTML = '<span class="dot" style="background-color: #ef4444; display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px;"></span> Off-line';
   }
 }
@@ -42,10 +44,9 @@ function switchPage(pageId, element) {
     sec.style.display = 'none';
   });
 
-  // 2. Procura a seção pelo ID correspondente
+  // 2. Mapeamento flexível de IDs para garantir que encontre a seção correta
   let targetSection = document.getElementById(pageId);
 
-  // Mapeamentos alternativos para evitar incoerência com IDs do HTML
   if (!targetSection) {
     if (pageId === 'estoque' || pageId === 'pecas') {
       targetSection = document.getElementById('estoque') || document.getElementById('produtos') || document.getElementById('page-estoque');
@@ -55,10 +56,14 @@ function switchPage(pageId, element) {
       targetSection = document.getElementById('movimentacoes') || document.getElementById('page-movimentacoes');
     } else if (pageId === 'financeiro') {
       targetSection = document.getElementById('financeiro') || document.getElementById('page-financeiro');
+    } else if (pageId === 'relatorios' || pageId === 'reports') {
+      targetSection = document.getElementById('relatorios') || document.getElementById('reports') || document.getElementById('page-relatorios');
+    } else if (pageId === 'configuracoes' || pageId === 'settings') {
+      targetSection = document.getElementById('configuracoes') || document.getElementById('settings') || document.getElementById('page-configuracoes');
     }
   }
 
-  // Se mesmo assim não achou por ID, tenta achar pela classe
+  // Se não achar por ID, tenta buscar por classe CSS
   if (!targetSection) {
     targetSection = document.querySelector(`main section.${pageId}`) || document.querySelector(`section.${pageId}`);
   }
@@ -67,9 +72,11 @@ function switchPage(pageId, element) {
   if (targetSection) {
     targetSection.classList.add('active');
     targetSection.style.display = 'block';
+  } else {
+    console.warn(`Seção com ID "${pageId}" não foi encontrada no HTML.`);
   }
 
-  // 4. Atualiza os botões da barra lateral (marca o selecionado como active)
+  // 4. Atualiza os botões da barra lateral (marca o ativo)
   const navBtns = document.querySelectorAll('.sidebar button, .nav-menu button, .nav-btn');
   navBtns.forEach(btn => btn.classList.remove('active'));
 

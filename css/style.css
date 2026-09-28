@@ -654,3 +654,34 @@ input:focus, select:focus, textarea:focus {
 .btn-danger:hover {
   background-color: #dc2626;
 }
+
+/* Correção de contraste do rodapé */
+.db-status, 
+.sidebar .db-status,
+aside .db-status {
+  color: #9ca3af !important; /* Cor cinza claro legível para o rótulo */
+  font-size: 0.85rem !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  padding: 12px 16px !important;
+}
+
+#dbStatusBadge,
+.db-status span,
+.badge-status {
+  color: #ffffff !important; /* Texto branco puro para a palavra Supabase */
+  font-weight: 600 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+}
+
+.badge-status .dot,
+#dbStatusBadge .dot {
+  display: inline-block !important;
+  width: 8px !important;
+  height: 8px !important;
+  border-radius: 50% !important;
+  background-color: #10b981 !important; /* Ponto verde brilhante */
+}
