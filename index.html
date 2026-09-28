@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Veneza Auto Latas - Gestão de Estoque</title>
+
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Estilos CSS Separados -->
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/responsive.css">
+</head>
+
+<body>
+
+  <!-- CONTAINER DE NOTIFICAÇÕES (TOASTS) -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div>
+      <div class="brand">
+        <div class="brand-icon">
+          <i data-lucide="car"></i>
+        </div>
+        <div>
+          <div class="brand-title">VENEZA</div>
+          <div class="brand-subtitle">AUTO LATAS</div>
+        </div>
+      </div>
+
+      <ul class="nav-menu">
+        <li class="nav-item">
+          <button class="active" onclick="switchPage('dashboard', this)">
+            <i data-lucide="layout-dashboard"></i>
+            <span>Dashboard</span>
+          </button>
+        </li>
+        <li class="nav-item">
+          <button onclick="switchPage('estoque', this)">
+            <i data-lucide="boxes"></i>
+            <span>Estoque & Peças</span>
+          </button>
+        </li>
+        <li class="nav-item">
+          <button onclick="switchPage('movimentacoes', this)">
+            <i data-lucide="arrow-left-right"></i>
+            <span>Movimentações</span>
+          </button>
+        </li>
+        <li class="nav-item">
+          <button onclick="switchPage('financeiro', this)">
+            <i data-lucide="circle-dollar-sign"></i>
+            <span>Financeiro</span>
+          </button>
+        </li>
+        <li class="nav-item">
+          <button onclick="switchPage('relatorios', this)">
+            <i data-lucide="file-text"></i>
+            <span>Relatórios</span>
+          </button>
+        </li>
+        <li class="nav-item">
+          <button onclick="switchPage('configuracoes', this)">
+            <i data-lucide="settings"></i>
+            <span>Configurações</span>
+          </button>
+        </li>
+      </ul>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="db-status-pill">
+        <span>Banco de Dados:</span>
+        <span style="display:flex; align-items:center;">
+          <span class="db-status-dot" id="dbDot"></span>
+          <strong id="dbText" style="color:#fff;">Demo Local</strong>
+        </span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- CONTEÚDO PRINCIPAL -->
+  <div class="main-wrapper">
+    <header class="header-bar">
+      <div style="display:flex; align-items:center; gap:16px;">
+        <button class="btn btn-secondary toggle-sidebar-btn"
+          onclick="document.getElementById('sidebar').classList.toggle('open')">
+          <i data-lucide="menu"></i>
+        </button>
+        <div class="header-search">
+          <i data-lucide="search" class="search-icon"></i>
+          <input type="text" id="globalSearch" placeholder="Pesquisa rápida (Código, Nome, Local)..."
+            oninput="handleGlobalSearch(this.value)">
+        </div>
+      </div>
+
+      <button class="btn btn-primary" onclick="openProductModal()">
+        <i data-lucide="plus"></i>
+        <span>Nova Peça</span>
+      </button>
+    </header>
+
+    <main class="content-container">
+
+      <!-- PAGE: DASHBOARD -->
+      <section id="page-dashboard" class="page-section active">
+        <div class="page-header">
+          <div>
+            <h1 class="page-title">Visão Geral do Estoque</h1>
+            <p class="page-subtitle">Acompanhe métricas em tempo real e localização de peças</p>
+          </div>
+        </div>
+
+        <div class="grid-cards">
+          <div class="card">
+            <div class="card-stat-header">
+              <span class="card-stat-title">Total de Peças</span>
+              <div class="card-stat-icon"><i data-lucide="package"></i></div>
+            </div>
+            <div class="card-stat-value" id="dashTotalPecas">0</div>
+            <div class="card-stat-footer">Itens cadastrados</div>
+          </div>
+
+          <div class="card">
+            <div class="card-stat-header">
+              <span class="card-stat-title">Quantidade em Estoque</span>
+              <div class="card-stat-icon"><i data-lucide="layers"></i></div>
+            </div>
+            <div class="card-stat-value" id="dashQtdEstoque">0</div>
+            <div class="card-stat-footer">Unidades físicas armazenadas</div>
+          </div>
+
+          <div class="card">
+            <div class="card-stat-header">
+              <span class="card-stat-title">Estoque Baixo / Esgotado</span>
+              <div class="card-stat-icon" style="color:var(--danger);"><i data-lucide="alert-triangle"></i></div>
+            </div>
+            <div class="card-stat-value" style="color:var(--danger);" id="dashAlertas">0</div>
+            <div class="card-stat-footer">Necessitam de reposição</div>
+          </div>
+
+          <div class="card">
+            <div class="card-stat-header">
+              <span class="card-stat-title">Faturamento Mês</span>
+              <div class="card-stat-icon" style="color:var(--success);"><i data-lucide="trending-up"></i></div>
+            </div>
+            <div class="card-stat-value" style="color:var(--success);" id="dashFatMes">R$ 0,00</div>
+            <div class="card-stat-footer">Total faturado neste mês</div>
+          </div>
+        </div>
+
+        <div class="dashboard-analytics-grid">
+          <div class="card">
+            <h3 style="margin-bottom:16px; font-size:1rem;">Faturamento Recente</h3>
+            <canvas id="chartFaturamento" height="120"></canvas>
+          </div>
+          <div class="card">
+            <h3 style="margin-bottom:16px; font-size:1rem;">Peças com Estoque Baixo</h3>
+            <div id="dashLowStockList" style="display:flex; flex-direction:column; gap:10px;"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- PAGE: ESTOQUE -->
+      <section id="page-estoque" class="page-section">
+        <div class="page-header">
+          <div>
+            <h1 class="page-title">Catálogo de Peças</h1>
+            <p class="page-subtitle">Consulte o local exato, fotos e estoque de cada item</p>
+          </div>
+        </div>
+
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Foto</th>
+                <th>Nome / Descrição</th>
+                <th>Código Peça</th>
+                <th>Localização</th>
+                <th>Qtd</th>
+                <th>Preço Venda</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="tableEstoqueBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- PAGE: MOVIMENTAÇÕES -->
+      <section id="page-movimentacoes" class="page-section">
+        <div class="page-header">
+          <div>
+            <h1 class="page-title">Movimentações de Estoque</h1>
+            <p class="page-subtitle">Histórico de entradas e saídas do armazém</p>
+          </div>
+        </div>
+
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>Tipo</th>
+                <th>Produto</th>
+                <th>Qtd</th>
+                <th>Observação</th>
+              </tr>
+            </thead>
+            <tbody id="tableMovimentacoesBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- PAGE: FINANCEIRO -->
+      <section id="page-financeiro" class="page-section">
+        <div class="page-header">
+          <div>
+            <h1 class="page-title">Faturamento & Vendas</h1>
+            <p class="page-subtitle">Registro simples de vendas e receita semanal/mensal</p>
+          </div>
+        </div>
+
+        <div class="grid-cards">
+          <div class="card">
+            <span class="card-stat-title">Faturamento da Semana</span>
+            <div class="card-stat-value" id="finFatSemana">R$ 0,00</div>
+          </div>
+          <div class="card">
+            <span class="card-stat-title">Faturamento do Mês</span>
+            <div class="card-stat-value" id="finFatMes">R$ 0,00</div>
+          </div>
+        </div>
+
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>Descrição</th>
+                <th>Valor</th>
+                <th>Observações</th>
+              </tr>
+            </thead>
+            <tbody id="tableFinanceiroBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- PAGE: RELATÓRIOS -->
+      <section id="page-relatorios" class="page-section">
+        <div class="page-header">
+          <div>
+            <h1 class="page-title">Relatórios Simples</h1>
+            <p class="page-subtitle">Resumos consolidados para tomada de decisão</p>
+          </div>
+          <button class="btn btn-secondary" onclick="exportDataJSON()">
+            <i data-lucide="download"></i> Exportar Dados em JSON
+          </button>
+        </div>
+
+        <div class="grid-cards">
+          <div class="card">
+            <h3>Valor Estimado do Estoque</h3>
+            <p style="font-size:1.8rem; font-weight:700; margin-top:10px;" id="relValorEstoque">R$ 0,00</p>
+            <p style="font-size:0.8rem; color:var(--text-muted); margin-top:4px;">Baseado no Preço de Custo das peças
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- PAGE: CONFIGURAÇÕES -->
+      <section id="page-configuracoes" class="page-section">
+        <div class="page-header">
+          <div>
+            <h1 class="page-title">Configurações do Sistema</h1>
+            <p class="page-subtitle">Ajustes do Firebase e backup local de segurança</p>
+          </div>
+        </div>
+
+        <div class="card config-card">
+          <h3 style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
+            <i data-lucide="flame" style="color:var(--primary-yellow);"></i>
+            Credenciais do Firebase Firestore
+          </h3>
+          <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom: 16px;">
+            Cole abaixo o objeto de configuração obtido no seu Console do Firebase para conectar o banco de dados online
+            compartilhado em tempo real.
+          </p>
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label>API KEY</label>
+              <input type="text" id="cfgApiKey" placeholder="AIzaSy...">
+            </div>
+            <div class="form-group">
+              <label>AUTH DOMAIN</label>
+              <input type="text" id="cfgAuthDomain" placeholder="seu-projeto.firebaseapp.com">
+            </div>
+            <div class="form-group">
+              <label>PROJECT ID</label>
+              <input type="text" id="cfgProjectId" placeholder="seu-projeto-id">
+            </div>
+            <div class="form-group">
+              <label>APP ID</label>
+              <input type="text" id="cfgAppId" placeholder="1:123456:web:abcdef">
+            </div>
+          </div>
+
+          <div style="margin-top:20px; display:flex; justify-content:flex-end;">
+            <button class="btn btn-primary" onclick="saveFirebaseConfig()">
+              Salvar & Conectar
+            </button>
+          </div>
+        </div>
+
+        <div class="card config-card">
+          <h3 style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
+            <i data-lucide="database"></i>
+            Backup e Restauração de Dados (JSON)
+          </h3>
+          <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom: 16px;">
+            Exporte periodicamente todos os seus dados para manter cópias de segurança locais gratuitas sem custos
+            adicionais.
+          </p>
+          <div style="display:flex; gap:12px; flex-wrap:wrap;">
+            <button class="btn btn-secondary" onclick="exportDataJSON()">
+              <i data-lucide="download"></i> Exportar Backup (JSON)
+            </button>
+            <label class="btn btn-secondary" style="cursor:pointer;">
+              <i data-lucide="upload"></i> Importar Backup (JSON)
+              <input type="file" id="importFileInput" accept=".json" style="display:none;"
+                onchange="importDataJSON(event)">
+            </label>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- MODAL: NOVA / EDITAR PEÇA -->
+  <div class="modal-overlay" id="modalProduct">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="modalProductTitle">Cadastrar Nova Peça</h2>
+        <button class="btn btn-secondary" onclick="closeProductModal()" style="padding:4px 8px;"><i
+            data-lucide="x"></i></button>
+      </div>
+
+      <form id="formProduct" onsubmit="handleProductSubmit(event)">
+        <input type="hidden" id="prodId">
+        <div class="form-grid">
+          <div class="form-group full">
+            <label>Foto da Peça (Compactada automaticamente)</label>
+
+            <!-- Container estilizado do upload -->
+            <div class="file-upload-wrapper">
+              <input type="file" id="prodPhoto" accept="image/*" onchange="previewAndCompressImage(this)">
+              <label for="prodPhoto" class="btn btn-secondary file-upload-btn">
+                <i data-lucide="upload-cloud"></i>
+                <span>Selecionar Imagem</span>
+              </label>
+              <span class="file-name-text" id="fileNameText">Nenhum arquivo selecionado</span>
+            </div>
+
+            <input type="hidden" id="prodPhotoBase64">
+            <img id="photoPreview"
+              style="max-height:100px; object-fit:contain; margin-top:8px; display:none; border-radius:8px;">
+          </div>
+
+          <div class="form-group full">
+            <label>Nome da Peça *</label>
+            <input type="text" id="prodNome" required placeholder="Ex: Farol Dianteiro Direiro Gol G6">
+          </div>
+
+          <div class="form-group">
+            <label>Código da Peça *</label>
+            <input type="text" id="prodCodigo" required placeholder="Ex: FAR-G6-2015">
+          </div>
+
+          <div class="form-group">
+            <label>Localização Física *</label>
+            <input type="text" id="prodLocalizacao" required placeholder="Ex: Prateleira B2">
+          </div>
+
+          <div class="form-group">
+            <label>Quantidade Atual *</label>
+            <input type="number" id="prodQtd" min="0" value="1" required>
+          </div>
+
+          <div class="form-group">
+            <label>Estoque Mínimo</label>
+            <input type="number" id="prodEstoqueMin" min="0" value="1">
+          </div>
+
+          <div class="form-group">
+            <label>Preço de Custo (R$)</label>
+            <input type="number" step="0.01" id="prodPrecoCusto" placeholder="0.00">
+          </div>
+
+          <div class="form-group">
+            <label>Preço de Venda (R$)</label>
+            <input type="number" step="0.01" id="prodPrecoVenda" placeholder="0.00">
+          </div>
+        </div>
+
+        <div style="margin-top:24px; display:flex; justify-content:flex-end; gap:12px;">
+          <button type="button" class="btn btn-secondary" onclick="closeProductModal()">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Salvar Peça</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL DE CONFIRMAÇÃO DE EXCLUSÃO -->
+  <div class="modal-overlay" id="modalConfirm">
+    <div class="modal" style="max-width: 440px;">
+      <div class="modal-header">
+        <h2 style="display:flex; align-items:center; gap:8px; font-size:1.1rem; color:var(--danger);">
+          <i data-lucide="alert-triangle"></i> Excluir Peça
+        </h2>
+        <button class="btn btn-secondary" onclick="closeConfirmModal()" style="padding:4px 8px;">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+
+      <div style="margin-bottom:24px; color:var(--text-muted); font-size:0.9rem; line-height:1.5;">
+        Tem certeza que deseja excluir a peça <strong id="confirmItemName" style="color:var(--text-main);"></strong>?
+        Esta ação não poderá ser desfeita.
+      </div>
+
+      <div style="display:flex; justify-content:flex-end; gap:12px;">
+        <button class="btn btn-secondary" onclick="closeConfirmModal()">Cancelar</button>
+        <button class="btn" id="btnConfirmDelete" style="background-color:var(--danger); color:#fff;">
+          <i data-lucide="trash-2" style="width:16px;"></i> Sim, Excluir
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: REGISTRAR VENDA -->
+  <div class="modal-overlay" id="modalVenda">
+    <div class="modal" style="max-width: 450px;">
+      <div class="modal-header">
+        <h2 style="display:flex; align-items:center; gap:8px;">
+          <i data-lucide="circle-dollar-sign" style="color:var(--success);"></i> Registrar Venda
+        </h2>
+        <button class="btn btn-secondary" onclick="closeVendaModal()" style="padding:4px 8px;">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+
+      <form id="formVenda" onsubmit="handleVendaSubmit(event)">
+        <input type="hidden" id="vendaProdId">
+
+        <div class="form-grid">
+          <div class="form-group full">
+            <label>Peça Selecionada</label>
+            <input type="text" id="vendaProdNome" readonly style="background-color:#f1f5f9; font-weight:600;">
+          </div>
+
+          <div class="form-group">
+            <label>Quantidade Vendida *</label>
+            <input type="number" id="vendaQtd" min="1" value="1" required oninput="calcularTotalVenda()">
+          </div>
+
+          <div class="form-group">
+            <label>Preço Unitário (R$)</label>
+            <input type="number" step="0.01" id="vendaPrecoUnitario" required oninput="calcularTotalVenda()">
+          </div>
+
+          <div class="form-group full">
+            <label>Valor Total da Venda</label>
+            <input type="text" id="vendaValorTotal" readonly
+              style="background-color:#f8fafc; font-weight:700; color:var(--success); font-size:1.1rem;">
+          </div>
+
+          <div class="form-group full">
+            <label>Observação / Cliente</label>
+            <input type="text" id="vendaObs" placeholder="Ex: Venda balcão / Cliente João">
+          </div>
+        </div>
+
+        <div style="margin-top:24px; display:flex; justify-content:flex-end; gap:12px;">
+          <button type="button" class="btn btn-secondary" onclick="closeVendaModal()">Cancelar</button>
+          <button type="submit" class="btn" style="background-color:var(--success); color:#fff;">
+            <i data-lucide="check"></i> Confirmar Venda
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Scripts JavaScript Separados -->
+  <script src="js/app.js"></script>
+</body>
+
+</html>
