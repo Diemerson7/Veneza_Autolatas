@@ -1,574 +1,275 @@
-// ==========================================================================
-// ESTADO DA APLICAÇÃO EM MEMÓRIA LOCAL
-// ==========================================================================
-let appData = JSON.parse(localStorage.getItem('veneza_data')) || {
-  produtos: [],
-  movimentacoes: [],
-  faturamentos: []
-};
+// js/app.js
 
-const initialDemoData = {
-  produtos: [
-    { id: '1', nome: 'Farol Dianteiro Gol G6', codigo: 'FAROL123', localizacao: 'Prateleira A2', quantidade: 4, estoqueMin: 2, precoCusto: 120.00, precoVenda: 180.00, foto: '' },
-    { id: '2', nome: 'Para-choque Dianteiro Onix', codigo: 'PC-ONIX-19', localizacao: 'Corredor 01', quantidade: 1, estoqueMin: 2, precoCusto: 250.00, precoVenda: 410.00, foto: '' }
-  ],
-  movimentacoes: [
-    { id: 'm1', data: '2026-09-20', tipo: 'Entrada', produtoNome: 'Farol Dianteiro Gol G6', quantidade: 4, obs: 'Lote inicial' }
-  ],
-  faturamentos: [
-    { id: 'f1', data: '2026-09-25', descricao: 'Venda Farol Gol G6', valor: 180.00, obs: 'Balcão' }
-  ]
-};
+// Obtém a instância do Supabase vinda do supabase-config.js
+const getDb = () => window.dbClient;
 
-// ==========================================================================
-// INICIALIZAÇÃO
-// ==========================================================================
-window.addEventListener('DOMContentLoaded', () => {
-  if (window.lucide) lucide.createIcons();
-  loadLocalState();
-  loadFirebaseConfigFields();
-  renderAll();
+// --- INICIALIZAÇÃO DA APLICAÇÃO ---
+document.addEventListener('DOMContentLoaded', () => {
+  // Inicializa a página inicial (Dashboard)
+  const defaultBtn = document.querySelector(".nav-menu button[onclick*='dashboard']") || document.querySelector(".sidebar button");
+  switchPage('dashboard', defaultBtn);
+
+  // Atualiza indicador do banco no rodapé
+  updateDbStatusBadge(true);
+
+  // Carrega os dados do Supabase
+  loadDataFromSupabase();
+
+  // Renderiza ícones
+  if (window.lucide) window.lucide.createIcons();
 });
 
-function switchPage(pageId, element) {
-  document.querySelectorAll('.page-section').forEach(sec => sec.classList.remove('active'));
-  document.querySelectorAll('.nav-item button').forEach(btn => btn.classList.remove('active'));
+// --- INDICADOR DO BANCO DE DADOS NO RODAPÉ ---
+function updateDbStatusBadge(isOnline) {
+  const badge = document.getElementById('dbStatusBadge');
+  if (!badge) return;
 
-  const targetPage = document.getElementById(`page-${pageId}`);
-  if(targetPage) targetPage.classList.add('active');
-  if(element) element.classList.add('active');
-
-  renderAll();
-}
-
-function loadLocalState() {
-  const saved = localStorage.getItem('veneza_app_data');
-  if (saved) {
-    try { appData = JSON.parse(saved); } catch(e) { appData = initialDemoData; }
+  if (isOnline) {
+    badge.className = 'badge-status online';
+    badge.innerHTML = '<span class="dot" style="background-color: #10b981; display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px;"></span> Supabase';
   } else {
-    appData = initialDemoData;
-    saveLocalState();
+    badge.className = 'badge-status offline';
+    badge.innerHTML = '<span class="dot" style="background-color: #ef4444; display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px;"></span> Off-line';
   }
 }
 
-function saveLocalState() {
-  localStorage.setItem('veneza_app_data', JSON.stringify(appData));
-}
+// --- SISTEMA DE NAVEGAÇÃO ENTRE ABAS ---
+function switchPage(pageId, element) {
+  // 1. Oculta todas as seções e remove a classe 'active'
+  const allSections = document.querySelectorAll('main section, .page-section, .page, section');
+  allSections.forEach(sec => {
+    sec.classList.remove('active');
+    sec.style.display = 'none';
+  });
 
-function renderAll() {
-  renderEstoqueTable(appData.produtos);
-  renderDashboard();
-  renderMovimentacoesTable();
-  renderFinanceiroTable();
-  renderRelatorios();
-}
+  // 2. Procura a seção pelo ID correspondente
+  let targetSection = document.getElementById(pageId);
 
-// ==========================================================================
-// RENDERIZADORES DAS PÁGINAS
-// ==========================================================================
-function renderDashboard() {
-  const totalPecas = appData.produtos.length;
-  const qtdEstoque = appData.produtos.reduce((acc, p) => acc + Number(p.quantidade || 0), 0);
-  const baixos = appData.produtos.filter(p => Number(p.quantidade) <= Number(p.estoqueMin || 1));
-
-  document.getElementById('dashTotalPecas').innerText = totalPecas;
-  document.getElementById('dashQtdEstoque').innerText = qtdEstoque;
-  document.getElementById('dashAlertas').innerText = baixos.length;
-
-  const lowStockContainer = document.getElementById('dashLowStockList');
-  if (lowStockContainer) {
-    if(baixos.length === 0) {
-      lowStockContainer.innerHTML = '<p style="font-size:0.85rem; color:var(--text-muted);">Nenhuma peça com estoque baixo.</p>';
-    } else {
-      lowStockContainer.innerHTML = baixos.map(p => `
-        <div style="display:flex; justify-content:space-between; align-items:center; background:#f8fafc; padding:8px 12px; border-radius:8px;">
-          <div>
-            <strong style="font-size:0.85rem;">${p.nome}</strong>
-            <div style="font-size:0.75rem; color:var(--text-muted);">${p.localizacao}</div>
-          </div>
-          <span class="badge-status badge-danger">${p.quantidade} un.</span>
-        </div>
-      `).join('');
+  // Mapeamentos alternativos para evitar incoerência com IDs do HTML
+  if (!targetSection) {
+    if (pageId === 'estoque' || pageId === 'pecas') {
+      targetSection = document.getElementById('estoque') || document.getElementById('produtos') || document.getElementById('page-estoque');
+    } else if (pageId === 'dashboard') {
+      targetSection = document.getElementById('dashboard') || document.getElementById('page-dashboard');
+    } else if (pageId === 'movimentacoes') {
+      targetSection = document.getElementById('movimentacoes') || document.getElementById('page-movimentacoes');
+    } else if (pageId === 'financeiro') {
+      targetSection = document.getElementById('financeiro') || document.getElementById('page-financeiro');
     }
   }
-}
 
-// ==========================================================================
-// RENDERIZAR TABELA DE ESTOQUE (COM BOTÃO DE VENDA)
-// ==========================================================================
-function renderEstoqueTable(items) {
-  const tbody = document.getElementById('tableEstoqueBody');
-  if(!tbody) return;
-
-  if(items.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--text-muted);">Nenhuma peça encontrada.</td></tr>`;
-    return;
+  // Se mesmo assim não achou por ID, tenta achar pela classe
+  if (!targetSection) {
+    targetSection = document.querySelector(`main section.${pageId}`) || document.querySelector(`section.${pageId}`);
   }
 
-  tbody.innerHTML = items.map(p => `
-    <tr>
-      <td>
-        ${p.foto 
-          ? `<img src="${p.foto}" class="thumb-img">` 
-          : `<div class="thumb-img" style="display:flex;align-items:center;justify-content:center;color:#a1a1aa;"><i data-lucide="image" style="width:20px;"></i></div>`}
-      </td>
-      <td><strong>${p.nome}</strong></td>
-      <td><span class="code-badge">${p.codigo}</span></td>
-      <td><span class="location-badge"><i data-lucide="map-pin" style="width:12px;"></i> ${p.localizacao}</span></td>
-      <td>
-        <strong style="color: ${Number(p.quantidade) <= Number(p.estoqueMin) ? 'var(--danger)' : 'inherit'}">
-          ${p.quantidade} un.
-        </strong>
-      </td>
-      <td>R$ ${Number(p.precoVenda || 0).toFixed(2)}</td>
-      <td>
-        <div style="display:flex; gap:6px;">
-          <button class="btn btn-secondary" style="padding:6px 10px; background-color:var(--success-bg); color:var(--success); border-color:var(--success);" onclick="openVendaModal('${p.id}')" title="Registrar Venda">
-            <i data-lucide="shopping-cart" style="width:14px;"></i> Vender
-          </button>
-          <button class="btn btn-secondary" style="padding:6px 10px;" onclick="deleteProduct('${p.id}')" title="Excluir">
-            <i data-lucide="trash-2" style="width:14px; color:var(--danger);"></i>
-          </button>
-        </div>
-      </td>
-    </tr>
-  `).join('');
-  if (window.lucide) lucide.createIcons();
-}
-
-function renderMovimentacoesTable() {
-  const tbody = document.getElementById('tableMovimentacoesBody');
-  if(!tbody) return;
-  tbody.innerHTML = appData.movimentacoes.map(m => `
-    <tr>
-      <td>${m.data}</td>
-      <td><span class="badge-status ${m.tipo === 'Entrada' ? 'badge-success' : 'badge-danger'}">${m.tipo}</span></td>
-      <td>${m.produtoNome}</td>
-      <td><strong>${m.quantidade} un.</strong></td>
-      <td>${m.obs || '-'}</td>
-    </tr>
-  `).join('');
-}
-
-function renderFinanceiroTable() {
-  const tbody = document.getElementById('tableFinanceiroBody');
-  if(!tbody) return;
-  tbody.innerHTML = appData.faturamentos.map(f => `
-    <tr>
-      <td>${f.data}</td>
-      <td>${f.descricao}</td>
-      <td><strong style="color:var(--success);">R$ ${Number(f.valor).toFixed(2)}</strong></td>
-      <td>${f.obs || '-'}</td>
-    </tr>
-  `).join('');
-}
-
-function renderRelatorios() {
-  const totalValor = appData.produtos.reduce((acc, p) => acc + (Number(p.quantidade || 0) * Number(p.precoCusto || 0)), 0);
-  document.getElementById('relValorEstoque').innerText = `R$ ${totalValor.toFixed(2)}`;
-}
-
-// ==========================================================================
-// PESQUISA GLOBAL
-// ==========================================================================
-function handleGlobalSearch(query) {
-  const q = query.toLowerCase().trim();
-  if(!q) {
-    renderEstoqueTable(appData.produtos);
-    return;
-  }
-  const filtered = appData.produtos.filter(p => 
-    p.nome.toLowerCase().includes(q) ||
-    p.codigo.toLowerCase().includes(q) ||
-    p.localizacao.toLowerCase().includes(q)
-  );
-  renderEstoqueTable(filtered);
-}
-
-// ==========================================================================
-// FOTOS & MODAL
-// ==========================================================================
-function previewAndCompressImage(fileInput) {
-  const file = fileInput.files[0];
-  const nameLabel = document.getElementById('fileNameText');
-  
-  if (!file) {
-    if (nameLabel) nameLabel.innerText = 'Nenhum arquivo selecionado';
-    return;
+  // 3. Exibe a seção encontrada
+  if (targetSection) {
+    targetSection.classList.add('active');
+    targetSection.style.display = 'block';
   }
 
-  // Atualiza o texto com o nome do arquivo selecionado
-  if (nameLabel) nameLabel.innerText = file.name;
+  // 4. Atualiza os botões da barra lateral (marca o selecionado como active)
+  const navBtns = document.querySelectorAll('.sidebar button, .nav-menu button, .nav-btn');
+  navBtns.forEach(btn => btn.classList.remove('active'));
 
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    const img = new Image();
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      const maxW = 600;
-      let scale = maxW / img.width;
-      if (scale > 1) scale = 1;
+  if (element) {
+    element.classList.add('active');
+  }
 
-      canvas.width = img.width * scale;
-      canvas.height = img.height * scale;
-
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-      const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
-      document.getElementById('prodPhotoBase64').value = compressedBase64;
-
-      const preview = document.getElementById('photoPreview');
-      preview.src = compressedBase64;
-      preview.style.display = 'block';
-    };
-    img.src = e.target.result;
-  };
-  reader.readAsDataURL(file);
+  // 5. Atualiza ícones Lucide
+  if (window.lucide) window.lucide.createIcons();
 }
 
-function openProductModal() {
-  document.getElementById('formProduct').reset();
-  document.getElementById('prodPhotoBase64').value = '';
-  document.getElementById('photoPreview').style.display = 'none';
-  document.getElementById('modalProduct').classList.add('active');
-}
-
-function closeProductModal() {
-  document.getElementById('modalProduct').classList.remove('active');
-}
-
-// ==========================================================================
-// ENVIO DO FORMULÁRIO COM TRATAMENTO DE ERRO
-// ==========================================================================
-function handleProductSubmit(e) {
-  e.preventDefault();
-
+// --- CARREGAR DADOS DO SUPABASE ---
+async function loadDataFromSupabase() {
   try {
-    const nome = document.getElementById('prodNome').value.trim();
-    const codigo = document.getElementById('prodCodigo').value.trim();
-    const localizacao = document.getElementById('prodLocalizacao').value.trim();
-
-    // Validação básica dos campos
-    if (!nome || !codigo || !localizacao) {
-      showToast('Campos obrigatórios', 'Por favor, preencha todos os campos com asterisco (*).', 'danger');
+    const db = getDb();
+    if (!db) {
+      updateDbStatusBadge(false);
       return;
     }
 
-    const newProd = {
-      id: Date.now().toString(),
-      nome: nome,
-      codigo: codigo,
-      localizacao: localizacao,
-      quantidade: Number(document.getElementById('prodQtd').value || 0),
-      estoqueMin: Number(document.getElementById('prodEstoqueMin').value || 1),
-      precoCusto: Number(document.getElementById('prodPrecoCusto').value || 0),
-      precoVenda: Number(document.getElementById('prodPrecoVenda').value || 0),
-      foto: document.getElementById('prodPhotoBase64').value
-    };
+    const { data: produtos, error: errProdutos } = await db
+      .from('produtos')
+      .select('*')
+      .order('created_at', { ascending: false });
 
-    appData.produtos.push(newProd);
-    saveLocalState();
-    closeProductModal();
-    renderAll();
+    if (errProdutos) throw errProdutos;
 
-    // Notificação de sucesso com o nome da peça
-    showToast('Peça Cadastrada!', `"${nome}" foi salva no estoque com sucesso.`, 'success');
+    const { data: faturamentos, error: errFat } = await db
+      .from('faturamentos')
+      .select('*');
 
+    if (errFat) throw errFat;
+
+    updateDbStatusBadge(true);
+    renderProductsTable(produtos || []);
+    updateDashboardCards(produtos || [], faturamentos || []);
   } catch (error) {
-    console.error('Erro ao salvar peça:', error);
-    showToast('Erro ao Cadastrar', 'Não foi possível salvar a peça. Tente novamente.', 'danger');
+    console.error('Erro ao carregar dados:', error);
+    updateDbStatusBadge(false);
+    showToast('Erro de Conexão', 'Não foi possível carregar os dados do banco.', 'danger');
   }
 }
 
-// Variável temporária para guardar o ID da peça selecionada para exclusão
-let itemToDeleteId = null;
-
-// Abre o modal customizado de confirmação
-function deleteProduct(id) {
-  const product = appData.produtos.find(p => p.id === id);
-  if (!product) return;
-
-  itemToDeleteId = id;
-
-  // Atualiza o nome do item no texto do modal
-  const nameElement = document.getElementById('confirmItemName');
-  if (nameElement) nameElement.innerText = `"${product.nome}"`;
-
-  // Configura a ação do botão de confirmação
-  const btnConfirm = document.getElementById('btnConfirmDelete');
-  if (btnConfirm) {
-    btnConfirm.onclick = () => confirmDeleteProduct(product.nome);
-  }
-
-  const modal = document.getElementById('modalConfirm');
-  if (modal) {
-    modal.classList.add('active');
-    if (window.lucide) lucide.createIcons();
-  }
-}
-
-// Fecha o modal de confirmação
-function closeConfirmModal() {
-  const modal = document.getElementById('modalConfirm');
-  if (modal) modal.classList.remove('active');
-  itemToDeleteId = null;
-}
-
-// Executa a exclusão após o clique em "Sim, Excluir"
-function confirmDeleteProduct(productName) {
-  if (!itemToDeleteId) return;
+// --- SALVAR PEÇA (CADASTRAR / EDITAR) ---
+async function handleProductSubmit(e) {
+  if (e) e.preventDefault();
 
   try {
-    appData.produtos = appData.produtos.filter(p => p.id !== itemToDeleteId);
-    saveLocalState();
-    renderAll();
-    closeConfirmModal();
+    const db = getDb();
+    const prodId = document.getElementById('prodId')?.value;
+    const nome = document.getElementById('prodNome')?.value.trim();
+    const codigo = document.getElementById('prodCodigo')?.value.trim();
+    const localizacao = document.getElementById('prodLocalizacao')?.value.trim();
 
-    // Notificação visual de exclusão concluída
-    showToast('Peça Excluída', `"${productName}" foi removida do estoque com sucesso.`, 'success');
-  } catch (error) {
-    console.error('Erro ao excluir peça:', error);
-    showToast('Erro ao Excluir', 'Não foi possível excluir o item selecionado.', 'danger');
-  }
-}
-
-// ==========================================================================
-// GERENCIADOR DE CREDENCIAIS DO FIREBASE
-// ==========================================================================
-function saveFirebaseConfig() {
-  const config = {
-    apiKey: document.getElementById('cfgApiKey').value,
-    authDomain: document.getElementById('cfgAuthDomain').value,
-    projectId: document.getElementById('cfgProjectId').value,
-    appId: document.getElementById('cfgAppId').value
-  };
-
-  localStorage.setItem('veneza_firebase_config', JSON.stringify(config));
-  alert('Credenciais salvas com sucesso no navegador!');
-  updateDBStatusUI(true);
-}
-
-function loadFirebaseConfigFields() {
-  const saved = localStorage.getItem('veneza_firebase_config');
-  if (saved) {
-    try {
-      const cfg = JSON.parse(saved);
-      document.getElementById('cfgApiKey').value = cfg.apiKey || '';
-      document.getElementById('cfgAuthDomain').value = cfg.authDomain || '';
-      document.getElementById('cfgProjectId').value = cfg.projectId || '';
-      document.getElementById('cfgAppId').value = cfg.appId || '';
-      updateDBStatusUI(true);
-    } catch(e) {}
-  }
-}
-
-function updateDBStatusUI(isConfigured) {
-  const dot = document.getElementById('dbDot');
-  const text = document.getElementById('dbText');
-  if(isConfigured) {
-    dot.classList.add('online');
-    text.innerText = 'Conectado';
-  } else {
-    dot.classList.remove('online');
-    text.innerText = 'Demo Local';
-  }
-}
-
-// ==========================================================================
-// BACKUP JSON
-// ==========================================================================
-function exportDataJSON() {
-  const blob = new Blob([JSON.stringify(appData, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `backup_veneza_auto_latas_${new Date().toISOString().slice(0,10)}.json`;
-  a.click();
-}
-
-function importDataJSON(e) {
-  const file = e.target.files[0];
-  if(!file) return;
-
-  const reader = new FileReader();
-  reader.onload = (event) => {
-    try {
-      const imported = JSON.parse(event.target.result);
-      if(imported.produtos) {
-        appData = imported;
-        saveLocalState();
-        renderAll();
-        alert('Backup restaurado com sucesso!');
-      }
-    } catch(err) {
-      alert('Erro ao carregar o arquivo JSON.');
+    if (!nome || !codigo) {
+      showToast('Campos obrigatórios', 'Preencha os campos de Nome e Código.', 'danger');
+      return;
     }
-  };
-  reader.readAsText(file);
+
+    const payload = {
+      nome: nome,
+      codigo: codigo,
+      localizacao: localizacao || '',
+      quantidade: Number(document.getElementById('prodQtd')?.value || 0),
+      estoque_min: Number(document.getElementById('prodEstoqueMin')?.value || 1),
+      preco_custo: Number(document.getElementById('prodPrecoCusto')?.value || 0),
+      preco_venda: Number(document.getElementById('prodPrecoVenda')?.value || 0)
+    };
+
+    if (prodId) {
+      const { error } = await db.from('produtos').update(payload).eq('id', prodId);
+      if (error) throw error;
+      showToast('Peça Atualizada!', `"${nome}" foi alterada com sucesso.`, 'success');
+    } else {
+      const { error } = await db.from('produtos').insert([payload]);
+      if (error) throw error;
+      showToast('Peça Cadastrada!', `"${nome}" foi salva no banco de dados.`, 'success');
+    }
+
+    closeProductModal();
+    await loadDataFromSupabase();
+  } catch (error) {
+    console.error('Erro ao salvar produto:', error);
+    showToast('Erro ao Cadastrar', 'Falha ao salvar a peça no banco de dados.', 'danger');
+  }
 }
 
-// ==========================================================================
-// SISTEMA DE NOTIFICAÇÕES (TOASTS)
-// ==========================================================================
-function showToast(title, message, type = 'success') {
-  const container = document.getElementById('toastContainer');
-  if (!container) return;
+// --- RENDERIZAR TABELA DE PRODUTOS ---
+function renderProductsTable(produtos) {
+  const tbody = document.getElementById('tbodyProdutos') || document.querySelector('tbody');
+  if (!tbody) return;
+
+  tbody.innerHTML = '';
+
+  if (produtos.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:20px;">Nenhuma peça cadastrada.</td></tr>`;
+    return;
+  }
+
+  produtos.forEach(prod => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${prod.foto ? `<img src="${prod.foto}" class="table-thumb">` : '-'}</td>
+      <td><strong>${prod.nome}</strong></td>
+      <td><code>${prod.codigo}</code></td>
+      <td>${prod.localizacao || '-'}</td>
+      <td>${prod.quantidade}</td>
+      <td>R$ ${Number(prod.preco_venda || 0).toFixed(2)}</td>
+      <td>
+        <button onclick="deleteProduct('${prod.id}', '${escapeHtml(prod.nome)}')" style="cursor:pointer; border:none; background:none; color:#ef4444;" title="Apagar Peça">
+          <i data-lucide="trash-2"></i> Apagar
+        </button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  if (window.lucide) window.lucide.createIcons();
+}
+
+// --- ATUALIZAR CARDS DO DASHBOARD ---
+function updateDashboardCards(produtos, faturamentos) {
+  const totalPecasEl = document.getElementById('cardTotalPecas') || document.getElementById('totalPecas');
+  const estoqueBaixoEl = document.getElementById('cardEstoqueBaixo') || document.getElementById('estoqueBaixo');
+  const faturamentoEl = document.getElementById('cardFaturamento') || document.getElementById('faturamentoMes');
+
+  if (totalPecasEl) {
+    const total = produtos.reduce((acc, p) => acc + (Number(p.quantidade) || 0), 0);
+    totalPecasEl.innerText = total;
+  }
+
+  if (estoqueBaixoEl) {
+    const baixos = produtos.filter(p => Number(p.quantidade) <= Number(p.estoque_min || 1)).length;
+    estoqueBaixoEl.innerText = baixos;
+  }
+
+  if (faturamentoEl) {
+    const totalFat = faturamentos.reduce((acc, f) => acc + (Number(f.valor) || 0), 0);
+    faturamentoEl.innerText = `R$ ${totalFat.toFixed(2)}`;
+  }
+}
+
+// --- CONTROLE DOS MODAIS ---
+function openProductModal() {
+  const form = document.getElementById('formProduct') || document.querySelector('form');
+  if (form) form.reset();
+  const prodId = document.getElementById('prodId');
+  if (prodId) prodId.value = '';
+
+  const modal = document.getElementById('modalProduct') || document.getElementById('modalCadastro');
+  if (modal) modal.classList.add('active');
+  if (window.lucide) window.lucide.createIcons();
+}
+
+function closeProductModal() {
+  const modal = document.getElementById('modalProduct') || document.getElementById('modalCadastro');
+  if (modal) modal.classList.remove('active');
+}
+
+// --- DELETAR PEÇA ---
+async function deleteProduct(id, nome) {
+  if (!confirm(`Deseja realmente excluir a peça "${nome || ''}"?`)) return;
+  try {
+    const db = getDb();
+    const { error } = await db.from('produtos').delete().eq('id', id);
+    if (error) throw error;
+    showToast('Peça Removida', 'A peça foi apagada do banco de dados.', 'warning');
+    await loadDataFromSupabase();
+  } catch (err) {
+    console.error('Erro ao deletar:', err);
+    showToast('Erro ao Apagar', 'Não foi possível excluir a peça.', 'danger');
+  }
+}
+
+// --- MENSAGENS VISUAIS (TOAST) ---
+function showToast(titulo, mensagem, tipo = 'info') {
+  let container = document.getElementById('toastContainer');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'toastContainer';
+    container.className = 'toast-container';
+    document.body.appendChild(container);
+  }
 
   const toast = document.createElement('div');
-  toast.className = `toast toast-${type}`;
-
-  const iconName = type === 'success' ? 'check-circle-2' : 'alert-circle';
-
+  toast.className = `toast toast-${tipo}`;
   toast.innerHTML = `
-    <div class="toast-icon">
-      <i data-lucide="${iconName}"></i>
+    <div class="toast-header">
+      <strong>${titulo}</strong>
     </div>
-    <div class="toast-content">
-      <div class="toast-title">${title}</div>
-      <div class="toast-message">${message}</div>
-    </div>
+    <div class="toast-body">${mensagem}</div>
   `;
-
   container.appendChild(toast);
-  if (window.lucide) lucide.createIcons();
 
-  // Remove automaticamente após 4 segundos
   setTimeout(() => {
-    toast.style.opacity = '0';
-    toast.style.transform = 'translateX(100%)';
-    setTimeout(() => toast.remove(), 300);
+    toast.remove();
   }, 4000);
 }
 
-// ==========================================================================
-// FUNÇÕES PARA REGISTRO DE VENDA E FATURAMENTO
-// ==========================================================================
-
-// 1. Abre o modal e preenche os dados da peça selecionada
-function openVendaModal(productId) {
-  const product = appData.produtos.find(p => p.id === productId);
-  if (!product) return;
-
-  if (product.quantidade <= 0) {
-    showToast('Sem Estoque', 'Esta peça não possui unidades disponíveis.', 'danger');
-    return;
-  }
-
-  document.getElementById('vendaProdId').value = product.id;
-  document.getElementById('vendaProdNome').value = product.nome;
-  document.getElementById('vendaQtd').value = 1;
-  document.getElementById('vendaQtd').max = product.quantidade;
-  document.getElementById('vendaPrecoUnitario').value = product.precoVenda || 0;
-  document.getElementById('vendaObs').value = '';
-  
-  calcularTotalVenda();
-  document.getElementById('modalVenda').classList.add('active');
-}
-
-// 2. Fecha o modal de venda
-function closeVendaModal() {
-  document.getElementById('modalVenda').classList.remove('active');
-}
-
-// 3. Multiplica Quantidade x Preço Unitário em tempo real no modal
-function calcularTotalVenda() {
-  const qtd = Number(document.getElementById('vendaQtd').value || 0);
-  const preco = Number(document.getElementById('vendaPrecoUnitario').value || 0);
-  const total = qtd * preco;
-  document.getElementById('vendaValorTotal').value = `R$ ${total.toFixed(2)}`;
-}
-
-// 4. Salva a venda: baixa no estoque + registra movimentação + soma no faturamento
-function handleVendaSubmit(e) {
-  e.preventDefault();
-
-  const prodId = document.getElementById('vendaProdId').value;
-  const qtdVenda = Number(document.getElementById('vendaQtd').value);
-  const precoUnitario = Number(document.getElementById('vendaPrecoUnitario').value);
-  const obs = document.getElementById('vendaObs').value;
-  const valorTotal = qtdVenda * precoUnitario;
-
-  const product = appData.produtos.find(p => p.id === prodId);
-  if (!product || product.quantidade < qtdVenda) {
-    showToast('Quantidade Inválida', 'Quantidade maior do que a disponível no estoque.', 'danger');
-    return;
-  }
-
-  // Abate a quantidade no estoque da peça
-  product.quantidade -= qtdVenda;
-
-  const hoje = new Date().toISOString().slice(0, 10);
-
-  // Registra a saída na lista de movimentações
-  appData.movimentacoes = appData.movimentacoes || [];
-  appData.movimentacoes.unshift({
-    id: Date.now().toString(),
-    data: hoje,
-    tipo: 'Saída',
-    produtoNome: product.nome,
-    quantidade: qtdVenda,
-    obs: `Venda (R$ ${valorTotal.toFixed(2)})`
-  });
-
-  // Registra o valor no histórico de faturamento
-  appData.faturamentos = appData.faturamentos || [];
-  appData.faturamentos.unshift({
-    id: Date.now().toString(),
-    data: hoje,
-    descricao: `Venda: ${product.nome} (${qtdVenda}x)`,
-    valor: valorTotal,
-    obs: obs || 'Balcão'
-  });
-
-  saveLocalState();
-  closeVendaModal();
-  renderAll(); // Re-renderiza a tela com os novos valores
-
-  showToast('Venda Registrada!', `Venda de R$ ${valorTotal.toFixed(2)} salva com sucesso.`, 'success');
-}
-
-// 5. Calcula o faturamento da semana e do mês para atualizar os cards
-function renderFinanceiroTable() {
-  const tbody = document.getElementById('tableFinanceiroBody');
-  const agora = new Date();
-  
-  // Início do mês atual
-  const inicioMes = new Date(agora.getFullYear(), agora.getMonth(), 1);
-  
-  // Início da semana atual (Domingo)
-  const inicioSemana = new Date(agora);
-  inicioSemana.setDate(agora.getDate() - agora.getDay());
-  inicioSemana.setHours(0, 0, 0, 0);
-
-  let fatSemana = 0;
-  let fatMes = 0;
-
-  (appData.faturamentos || []).forEach(f => {
-    const dataVenda = new Date(f.data + 'T00:00:00');
-    const valor = Number(f.valor || 0);
-
-    if (dataVenda >= inicioMes) fatMes += valor;
-    if (dataVenda >= inicioSemana) fatSemana += valor;
-  });
-
-  // Atualiza o texto dos cards na tela
-  const elemSemana = document.getElementById('finFatSemana');
-  const elemMes = document.getElementById('finFatMes');
-  const elemDashMes = document.getElementById('dashFatMes');
-
-  if (elemSemana) elemSemana.innerText = `R$ ${fatSemana.toFixed(2)}`;
-  if (elemMes) elemMes.innerText = `R$ ${fatMes.toFixed(2)}`;
-  if (elemDashMes) elemDashMes.innerText = `R$ ${fatMes.toFixed(2)}`;
-
-  if (!tbody) return;
-
-  tbody.innerHTML = (appData.faturamentos || []).map(f => `
-    <tr>
-      <td>${f.data}</td>
-      <td>${f.descricao}</td>
-      <td><strong style="color:var(--success);">R$ ${Number(f.valor).toFixed(2)}</strong></td>
-      <td>${f.obs || '-'}</td>
-    </tr>
-  `).join('');
+function escapeHtml(text) {
+  if (!text) return '';
+  return text.replace(/'/g, "\\'").replace(/"/g, '&quot;');
 }
