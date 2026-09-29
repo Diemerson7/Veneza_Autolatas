@@ -453,7 +453,8 @@ async function handleProductSubmit(event) {
             document.getElementById('prodPrecoVenda')?.value || 0
         ),
         marca_carro: document.getElementById('prodMarcaCarro')?.value.trim() || '',
-        ano_carro: Number(document.getElementById('prodAnoCarro')?.value || 0) || null,
+        ano_carro:
+        document.getElementById('prodAnoCarro')?.value.trim() || '',
         cor_peca: document.getElementById('prodCorPeca')?.value.trim() || ''
     };
 
