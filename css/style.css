@@ -1618,3 +1618,37 @@ aside .db-status {
         width: 100%;
     }
 }
+
+/* ==========================================
+   CORREÇÃO DO SCROLL DA TABELA DE ESTOQUE
+   ========================================== */
+
+#page-estoque.page-section {
+    position: relative;
+    z-index: 1;
+}
+
+#page-estoque.page-section .page-header {
+    position: relative;
+    z-index: 10;
+}
+
+#page-estoque.page-section .page-header .btn {
+    position: relative;
+    z-index: 11;
+}
+
+#page-estoque.page-section .table-container {
+    position: relative;
+    z-index: 1;
+}
+
+#page-estoque.page-section table {
+    position: relative;
+    z-index: 1;
+}
+
+#page-estoque.page-section tbody {
+    position: relative;
+    z-index: 1;
+}
