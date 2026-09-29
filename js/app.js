@@ -784,20 +784,24 @@ function closeProductModal() {
 }
 
 
-// ==========================================
-// TABELA DE ESTOQUE
-// ==========================================
+ // ==========================================
+ // TABELA DE ESTOQUE
+ // ==========================================
 
 function renderProductsTable(produtos) {
-    produtosCache = produtos || [];
 
-    const tbody = document.getElementById('tableEstoqueBody');
+    const listaProdutos = produtos || [];
+
+    const tbody = document.getElementById(
+        'tableEstoqueBody'
+    );
 
     if (!tbody) return;
 
     tbody.innerHTML = '';
 
-    if (!produtos.length) {
+    if (!listaProdutos.length) {
+
         tbody.innerHTML = `
             <tr>
                 <td colspan="7">
@@ -805,30 +809,46 @@ function renderProductsTable(produtos) {
                 </td>
             </tr>
         `;
+
         return;
     }
 
-    produtos.forEach(prod => {
-        const quantidade = Number(prod.quantidade || 0);
-        const estoqueMin = Number(prod.estoque_min || 0);
-        const precoVenda = Number(prod.preco_venda || 0);
+    listaProdutos.forEach(prod => {
+
+        const quantidade = Number(
+            prod.quantidade || 0
+        );
+
+        const estoqueMin = Number(
+            prod.estoque_min || 0
+        );
+
+        const precoVenda = Number(
+            prod.preco_venda || 0
+        );
+
         const id = String(prod.id);
 
         let status = '';
 
         if (quantidade <= 0) {
+
             status = `
                 <span class="status-badge danger">
                     Sem estoque
                 </span>
             `;
+
         } else if (quantidade <= estoqueMin) {
+
             status = `
                 <span class="status-badge warning">
                     Estoque baixo
                 </span>
             `;
+
         } else {
+
             status = `
                 <span class="status-badge success">
                     Normal
@@ -863,6 +883,7 @@ function renderProductsTable(produtos) {
                         <strong>
                             ${escapeHtml(prod.nome || '-')}
                         </strong>
+
                         <small>
                             ID: ${escapeHtml(id)}
                         </small>
@@ -885,7 +906,10 @@ function renderProductsTable(produtos) {
 
             <td>
                 <div class="estoque-info">
-                    <strong>${quantidade}</strong>
+                    <strong>
+                        ${quantidade}
+                    </strong>
+
                     ${status}
                 </div>
             </td>
@@ -946,7 +970,6 @@ function renderProductsTable(produtos) {
         window.lucide.createIcons();
     }
 }
-
 
 // ==========================================
 // VISUALIZAR PEÇA
@@ -1932,172 +1955,56 @@ function atualizarRelatorios(produtos) {
 
 function handleGlobalSearch(valor) {
 
-    const busca =
-        String(valor || '')
-            .toLowerCase()
-            .trim();
+    const busca = String(valor || '')
+        .toLowerCase()
+        .trim();
 
-
+    // Se a pesquisa estiver vazia,
+    // mostra todas as peças novamente.
     if (!busca) {
-
-        renderProductsTable(
-            produtosCache
-        );
-
+        renderProductsTable(produtosCache);
         return;
     }
 
+    // Cria uma lista somente para a pesquisa.
+    const resultados = produtosCache.filter(produto => {
 
-    const resultados =
-        produtosCache.filter(produto => {
+        const nome = String(
+            produto.nome || ''
+        ).toLowerCase();
 
-            const nome =
-                String(
-                    produto.nome || ''
-                ).toLowerCase();
+        const codigo = String(
+            produto.codigo || ''
+        ).toLowerCase();
 
+        const localizacao = String(
+            produto.localizacao || ''
+        ).toLowerCase();
 
-            const codigo =
-                String(
-                    produto.codigo || ''
-                ).toLowerCase();
+        const marcaCarro = String(
+            produto.marca_carro || ''
+        ).toLowerCase();
 
+        const anoCarro = String(
+            produto.ano_carro || ''
+        ).toLowerCase();
 
-            const localizacao =
-                String(
-                    produto.localizacao || ''
-                ).toLowerCase();
+        const corPeca = String(
+            produto.cor_peca || ''
+        ).toLowerCase();
 
+        return (
+            nome.includes(busca) ||
+            codigo.includes(busca) ||
+            localizacao.includes(busca) ||
+            marcaCarro.includes(busca) ||
+            anoCarro.includes(busca) ||
+            corPeca.includes(busca)
+        );
+    });
 
-            return (
-                nome.includes(busca) ||
-                codigo.includes(busca) ||
-                localizacao.includes(busca)
-            );
-        });
-
-
+    // Mostra somente os resultados.
     renderProductsTable(resultados);
-}
-
-
-// ==========================================
-// EXPORTAR JSON
-// ==========================================
-
-function exportDataJSON() {
-
-    const dados = {
-
-        produtos:
-            produtosCache,
-
-        faturamentos:
-            faturamentosCache,
-
-        exportadoEm:
-            new Date().toISOString()
-    };
-
-
-    const arquivo =
-        new Blob(
-            [
-                JSON.stringify(
-                    dados,
-                    null,
-                    2
-                )
-            ],
-            {
-                type:
-                    'application/json'
-            }
-        );
-
-
-    const url =
-        URL.createObjectURL(
-            arquivo
-        );
-
-
-    const link =
-        document.createElement('a');
-
-
-    link.href = url;
-
-    link.download =
-        'backup-veneza-auto-latas.json';
-
-
-    link.click();
-
-
-    URL.revokeObjectURL(url);
-
-
-    showToast(
-        'Backup exportado com sucesso!',
-        'success'
-    );
-}
-
-
-// ==========================================
-// IMPORTAR JSON
-// ==========================================
-
-async function importDataJSON(event) {
-
-    const arquivo =
-        event.target.files?.[0];
-
-
-    if (!arquivo) return;
-
-
-    try {
-
-        const texto =
-            await arquivo.text();
-
-
-        const dados =
-            JSON.parse(texto);
-
-
-        if (!Array.isArray(dados.produtos)) {
-
-            throw new Error(
-                'Backup inválido.'
-            );
-        }
-
-
-        showToast(
-            'Backup lido. Para segurança, a importação automática será feita depois.',
-            'success'
-        );
-
-
-    } catch (error) {
-
-        console.error(
-            'Erro ao importar:',
-            error
-        );
-
-
-        showToast(
-            'Arquivo de backup inválido.',
-            'error'
-        );
-    }
-
-
-    event.target.value = '';
 }
 
 
