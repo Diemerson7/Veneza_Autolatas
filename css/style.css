@@ -941,15 +941,15 @@ aside .db-status {
    ========================================================= */
 
 #estoque.page-section .btn-baixa {
-    background: #fffbeb !important;
-    border-color: #fde68a !important;
-    color: #a16207 !important;
+    background: #16a34a !important;
+    border-color: #16a34a !important;
+    color: #ffffff !important;
 }
 
 #estoque.page-section .btn-baixa:hover {
-    background: #fef3c7 !important;
-    border-color: #facc15 !important;
-    color: #854d0e !important;
+    background: #15803d !important;
+    border-color: #15803d !important;
+    color: #15803d !important;
 }
 
 /* =========================================================
@@ -1458,5 +1458,163 @@ aside .db-status {
 
     #page-estoque.page-section .acoes-estoque {
         justify-content: center;
+    }
+}
+
+#page-estoque.page-section .table-container {
+    overflow: visible !important;
+}
+
+#page-estoque.page-section table {
+    overflow: visible !important;
+}
+
+#page-estoque.page-section td {
+    overflow: visible !important;
+}
+
+#page-estoque.page-section .acoes-estoque {
+    position: relative;
+    z-index: 100;
+}
+
+#page-estoque.page-section [data-tooltip] {
+    position: relative;
+    z-index: 9999;
+}
+
+#page-estoque.page-section button[onclick^="darBaixaPeca"] {
+    background: transparent !important;
+    color: #16a34a !important;
+    border-color: #16a34a !important;
+}
+
+#page-estoque.page-section button[onclick^="darBaixaPeca"]:hover {
+    background: #16a34a !important;
+    color: #ffffff !important;
+}
+
+#modalDetalhesProduto .modal {
+    width: min(720px, calc(100vw - 32px));
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+#modalDetalhesProduto .product-details {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+#modalDetalhesProduto .product-details-photo {
+    width: 100%;
+    height: 240px;
+    border-radius: 14px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    color: #94a3b8;
+    flex-direction: column;
+    gap: 8px;
+}
+
+#modalDetalhesProduto .product-details-photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+#modalDetalhesProduto .product-details-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+#modalDetalhesProduto .product-details-header h2 {
+    margin: 0;
+    font-size: 1.35rem;
+    color: #0f172a;
+    font-weight: 700;
+}
+
+#modalDetalhesProduto .product-details-header span {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: #ecfdf5;
+    color: #059669;
+    border: 1px solid #a7f3d0;
+    font-size: 0.78rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+#modalDetalhesProduto .product-details-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+#modalDetalhesProduto .product-details-grid > div {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    padding: 14px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+}
+
+#modalDetalhesProduto .product-details-grid strong {
+    font-size: 0.75rem;
+    color: #64748b;
+    font-weight: 600;
+}
+
+#modalDetalhesProduto .product-details-grid span {
+    font-size: 0.95rem;
+    color: #0f172a;
+    font-weight: 600;
+    word-break: break-word;
+}
+
+#modalDetalhesProduto .product-details-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding-top: 4px;
+}
+
+#modalDetalhesProduto .product-details-actions .btn {
+    min-width: 130px;
+}
+
+@media (max-width: 600px) {
+    #modalDetalhesProduto .product-details-grid {
+        grid-template-columns: 1fr;
+    }
+
+    #modalDetalhesProduto .product-details-header {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    #modalDetalhesProduto .product-details-photo {
+        height: 200px;
+    }
+
+    #modalDetalhesProduto .product-details-actions {
+        flex-direction: column;
+    }
+
+    #modalDetalhesProduto .product-details-actions .btn {
+        width: 100%;
     }
 }

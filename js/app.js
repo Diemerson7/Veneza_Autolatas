@@ -451,7 +451,10 @@ async function handleProductSubmit(event) {
 
         preco_venda: Number(
             document.getElementById('prodPrecoVenda')?.value || 0
-        )
+        ),
+        marca_carro: document.getElementById('prodMarcaCarro')?.value.trim() || '',
+        ano_carro: Number(document.getElementById('prodAnoCarro')?.value || 0) || null,
+        cor_peca: document.getElementById('prodCorPeca')?.value.trim() || ''
     };
 
 
@@ -651,6 +654,10 @@ function editProduct(id) {
 
     const fileName =
         document.getElementById('fileNameText');
+
+    document.getElementById('prodMarcaCarro').value = produto.marca_carro || '';
+    document.getElementById('prodAnoCarro').value = produto.ano_carro || '';
+    document.getElementById('prodCorPeca').value = produto.cor_peca || '';
 
 
     if (campoId) {
@@ -947,46 +954,30 @@ function renderProductsTable(produtos) {
 
 function viewProduct(id) {
 
-    const produto =
-        produtosCache.find(
-            item =>
-                String(item.id) === String(id)
-        );
-
+    const produto = produtosCache.find(
+        item => String(item.id) === String(id)
+    );
 
     if (!produto) {
-
         showToast(
             'Peça não encontrada.',
             'error'
         );
-
         return;
     }
 
+    let modal = document.getElementById(
+        'modalDetalhesProduto'
+    );
 
-    let modal =
-        document.getElementById(
-            'modalDetalhesProduto'
-        );
-
-
-    // Cria usando as classes
-    // existentes no site.
     if (!modal) {
+        modal = document.createElement('div');
 
-        modal =
-            document.createElement('div');
+        modal.id = 'modalDetalhesProduto';
 
-        modal.id =
-            'modalDetalhesProduto';
-
-        modal.className =
-            'modal-overlay';
-
+        modal.className = 'modal-overlay';
 
         modal.innerHTML = `
-
             <div class="modal">
 
                 <div class="modal-header">
@@ -1005,29 +996,23 @@ function viewProduct(id) {
 
                 </div>
 
-
-                <div
-                    id="detalhesProdutoConteudo"
-                ></div>
+                <div id="detalhesProdutoConteudo"></div>
 
             </div>
         `;
 
-
         document.body.appendChild(modal);
     }
 
+    const quantidade = Number(
+        produto.quantidade || 0
+    );
 
-    const quantidade =
-        Number(produto.quantidade || 0);
-
-
-    const estoqueMin =
-        Number(produto.estoque_min || 0);
-
+    const estoqueMin = Number(
+        produto.estoque_min || 0
+    );
 
     let statusTexto = '';
-
 
     if (quantidade <= 0) {
 
@@ -1040,40 +1025,41 @@ function viewProduct(id) {
     } else {
 
         statusTexto = 'Estoque normal';
+
     }
 
-
     const foto = produto.foto
-
         ? `
             <div class="product-details-photo">
+
                 <img
                     src="${escapeHtml(produto.foto)}"
                     alt="Foto da peça"
                 >
+
             </div>
         `
-
         : `
             <div class="product-details-photo">
+
                 <i data-lucide="image"></i>
-                <span>Sem foto cadastrada</span>
+
+                <span>
+                    Sem foto cadastrada
+                </span>
+
             </div>
         `;
 
-
-    const conteudo =
-        document.getElementById(
-            'detalhesProdutoConteudo'
-        );
-
+    const conteudo = document.getElementById(
+        'detalhesProdutoConteudo'
+    );
 
     conteudo.innerHTML = `
 
         <div class="product-details">
 
             ${foto}
-
 
             <div class="product-details-header">
 
@@ -1094,6 +1080,7 @@ function viewProduct(id) {
 
                 <div>
                     <strong>ID</strong>
+
                     <span>
                         ${escapeHtml(
                             String(produto.id || '-')
@@ -1104,6 +1091,7 @@ function viewProduct(id) {
 
                 <div>
                     <strong>Código da Peça</strong>
+
                     <span>
                         ${escapeHtml(
                             produto.codigo || '-'
@@ -1114,6 +1102,7 @@ function viewProduct(id) {
 
                 <div>
                     <strong>Localização</strong>
+
                     <span>
                         ${escapeHtml(
                             produto.localizacao || '-'
@@ -1123,7 +1112,39 @@ function viewProduct(id) {
 
 
                 <div>
+                    <strong>Marca do Carro</strong>
+
+                    <span>
+                        ${escapeHtml(
+                            produto.marca_carro || '-'
+                        )}
+                    </span>
+                </div>
+
+
+                <div>
+                    <strong>Ano</strong>
+
+                    <span>
+                        ${produto.ano_carro || '-'}
+                    </span>
+                </div>
+
+
+                <div>
+                    <strong>Cor da Peça</strong>
+
+                    <span>
+                        ${escapeHtml(
+                            produto.cor_peca || '-'
+                        )}
+                    </span>
+                </div>
+
+
+                <div>
                     <strong>Quantidade</strong>
+
                     <span>
                         ${quantidade} unidade(s)
                     </span>
@@ -1132,6 +1153,7 @@ function viewProduct(id) {
 
                 <div>
                     <strong>Estoque Mínimo</strong>
+
                     <span>
                         ${estoqueMin}
                     </span>
@@ -1140,6 +1162,7 @@ function viewProduct(id) {
 
                 <div>
                     <strong>Preço de Custo</strong>
+
                     <span>
                         R$ ${formatarMoeda(
                             produto.preco_custo
@@ -1150,6 +1173,7 @@ function viewProduct(id) {
 
                 <div>
                     <strong>Preço de Venda</strong>
+
                     <span>
                         R$ ${formatarMoeda(
                             produto.preco_venda
@@ -1167,11 +1191,16 @@ function viewProduct(id) {
                     class="btn btn-secondary"
                     onclick="
                         closeProductDetails();
-                        editProduct('${escapeHtml(String(produto.id))}');
+                        editProduct('${escapeHtml(
+                            String(produto.id)
+                        )}');
                     "
                 >
+
                     <i data-lucide="pencil"></i>
+
                     Editar Peça
+
                 </button>
 
 
@@ -1180,7 +1209,9 @@ function viewProduct(id) {
                     class="btn btn-primary"
                     onclick="closeProductDetails()"
                 >
+
                     Fechar
+
                 </button>
 
             </div>
@@ -1188,15 +1219,12 @@ function viewProduct(id) {
         </div>
     `;
 
-
     modal.classList.add('active');
-
 
     if (window.lucide) {
         window.lucide.createIcons();
     }
 }
-
 
 // ==========================================
 // FECHAR DETALHES
