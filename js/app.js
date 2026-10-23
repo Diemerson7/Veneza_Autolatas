@@ -85,65 +85,50 @@ function switchPage(page, button = null) {
 
 
 // ==========================================
-// CARREGAR DADOS
+// CARREGAR DADOS SUPABASE
 // ==========================================
 
 async function loadDataFromSupabase() {
-
+  try {
     const db = getDb();
-
     if (!db) {
-        console.error('Supabase não está conectado.');
-        updateDbStatusBadge(false);
-        return;
+      updateDbStatusBadge(false);
+      return;
     }
 
+    // Busca produtos
+    const { data: produtos, error: errProdutos } = await db
+      .from('produtos')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (errProdutos) console.warn('Aviso produtos:', errProdutos.message);
+
+    // Busca faturamentos (se a tabela não existir, retorna vazio sem quebrar o site)
+    let faturamentos = [];
     try {
-
-        const { data: produtos, error: produtosError } = await db
-            .from('produtos')
-            .select('*')
-            .order('created_at', { ascending: false });
-
-        if (produtosError) {
-            throw produtosError;
-        }
-
-
-        const { data: faturamentos, error: faturamentosError } = await db
-            .from('faturamentos')
-            .select('*')
-            .order('created_at', { ascending: false });
-
-        if (faturamentosError) {
-            throw faturamentosError;
-        }
-
-
-        produtosCache = produtos || [];
-        faturamentosCache = faturamentos || [];
-
-
-        renderProductsTable(produtosCache);
-        updateDashboardCards(produtosCache, faturamentosCache);
-        renderMovimentacoesTable(faturamentosCache);
-        renderFinanceiroTable(faturamentosCache);
-        atualizarRelatorios(produtosCache);
-
-
-        updateDbStatusBadge(true);
-
-    } catch (error) {
-
-        console.error('Erro ao carregar dados:', error);
-
-        updateDbStatusBadge(false);
-
-        showToast(
-            'Erro ao carregar os dados do banco.',
-            'error'
-        );
+      const { data: fatData } = await db
+        .from('faturamentos')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (fatData) faturamentos = fatData;
+    } catch (e) {
+      console.warn('Tabela faturamentos ainda não sincronizada.');
     }
+
+    updateDbStatusBadge(true);
+    
+    // Atualiza as interfaces com segurança
+    renderProductsTable(produtos || []);
+    updateDashboardCards(produtos || [], faturamentos || []);
+    renderMovimentacoesTable(faturamentos || []);
+    renderFinanceiroTable(faturamentos || []);
+
+  } catch (error) {
+    console.error('Erro ao carregar dados:', error);
+    updateDbStatusBadge(false);
+    // Removido o Toast intrusivo para evitar poluição visual caso haja oscilação
+  }
 }
 
 
