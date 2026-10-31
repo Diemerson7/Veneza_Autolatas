@@ -98,9 +98,8 @@ async function loadDataFromSupabase() {
 
     // Busca produtos
     const { data: produtos, error: errProdutos } = await db
-      .from('produtos')
-      .select('*')
-      .order('created_at', { ascending: false });
+    .from('produtos')
+    .select('*');
 
     if (errProdutos) console.warn('Aviso produtos:', errProdutos.message);
 
