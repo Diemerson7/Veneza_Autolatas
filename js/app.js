@@ -99,7 +99,7 @@ async function loadDataFromSupabase() {
     // Busca produtos
     const { data: produtos, error: errProdutos } = await db
     .from('produtos')
-    .select('*');
+    .select('id, created_at, nome, codigo, localizacao, quantidade, estoque_min, preco_custo, preco_venda, marca_carro, ano_carro, cor_peca');
 
     if (errProdutos) console.warn('Aviso produtos:', errProdutos.message);
 
