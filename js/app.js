@@ -99,7 +99,7 @@ async function loadDataFromSupabase() {
     // Busca produtos
 const { data: produtos, error: errProdutos } = await db
     .from('produtos')
-    .select('id, created_at, nome, codigo, localizacao, quantidade, estoque_min, preco_custo, preco_venda, marca_carro, ano_carro, cor_peca')
+    .select('id, created_at, nome, codigo, localizacao, quantidade, estoque_min, preco_custo, preco_venda, marca_carro, ano_carro, cor_peca, foto_url')
     .order('created_at', { ascending: false });
 
     if (errProdutos) console.warn('Aviso produtos:', errProdutos.message);
@@ -369,6 +369,40 @@ function esconderPreviewFoto() {
 // CADASTRAR / EDITAR PRODUTO
 // ==========================================
 
+async function enviarFotoParaStorage(base64, produtoId) {
+    const db = getDb();
+
+    if (!db) {
+        throw new Error('Banco de dados não conectado.');
+    }
+
+    const resposta = await fetch(base64);
+    const arquivo = await resposta.blob();
+
+    const caminho = `${produtoId}/${Date.now()}.jpg`;
+
+    const { error: erroUpload } = await db.storage
+        .from('fotos-produtos')
+        .upload(caminho, arquivo, {
+            upsert: true,
+            contentType: 'image/jpeg'
+        });
+
+    if (erroUpload) {
+        throw erroUpload;
+    }
+
+    const { data } = db.storage
+        .from('fotos-produtos')
+        .getPublicUrl(caminho);
+
+    if (!data || !data.publicUrl) {
+        throw new Error('Não foi possível obter o endereço público da foto.');
+    }
+
+    return data.publicUrl;
+}x'
+
 async function handleProductSubmit(event) {
 
     event.preventDefault();
@@ -442,22 +476,6 @@ async function handleProductSubmit(event) {
         document.getElementById('prodAnoCarro')?.value.trim() || '',
         cor_peca: document.getElementById('prodCorPeca')?.value.trim() || ''
     };
-
-
-    // ======================================
-    // FOTO
-    // ======================================
-
-    const campoFoto =
-        document.getElementById('prodPhotoBase64');
-
-
-    if (campoFoto) {
-
-        payload.foto =
-            campoFoto.value || '';
-    }
-
 
     try {
 
@@ -583,6 +601,84 @@ function openProductModal() {
     }
 }
 
+    const campoFoto = document.getElementById('prodPhotoBase64');
+    const novaFoto = campoFoto?.value || '';
+
+    try {
+        // ==================================
+        // EDITAR PRODUTO
+        // ==================================
+
+        if (id) {
+            // Só envia uma nova foto se o usuário selecionar outra.
+            if (novaFoto) {
+                payload.foto_url = await enviarFotoParaStorage(
+                    novaFoto,
+                    id
+                );
+            }
+
+            const { error } = await db
+                .from('produtos')
+                .update(payload)
+                .eq('id', id);
+
+            if (error) {
+                throw error;
+            }
+
+            showToast(
+                'Peça atualizada com sucesso!',
+                'success'
+            );
+        }
+
+        // ==================================
+        // CADASTRAR PRODUTO
+        // ==================================
+
+        else {
+            // Gera um ID para usar na pasta da imagem.
+            const novoId = crypto.randomUUID();
+
+            payload.id = novoId;
+
+            if (novaFoto) {
+                payload.foto_url = await enviarFotoParaStorage(
+                    novaFoto,
+                    novoId
+                );
+            }
+
+            const { error } = await db
+                .from('produtos')
+                .insert([payload]);
+
+            if (error) {
+                throw error;
+            }
+
+            showToast(
+                'Peça cadastrada com sucesso!',
+                'success'
+            );
+        }
+
+        closeProductModal();
+
+        await loadDataFromSupabase();
+
+    } catch (error) {
+        console.error(
+            'Erro ao salvar produto:',
+            error
+        );
+
+        showToast(
+            'Não foi possível salvar a peça.',
+            'error'
+        );
+    }
 
 // ==========================================
 // EDITAR PEÇA
@@ -692,28 +788,22 @@ function editProduct(id) {
 
 
     // Mantém a foto atual.
-    if (campoFoto) {
+// A foto atual já está no Storage.
+// O campo Base64 fica vazio para não enviar novamente.
+if (campoFoto) {
+    campoFoto.value = '';
+}
 
-        campoFoto.value =
-            produto.foto || '';
+if (produto.foto_url) {
+    mostrarPreviewFoto(produto.foto_url);
+
+    if (fileName) {
+        fileName.textContent =
+            'Imagem atual da peça';
     }
-
-
-    if (produto.foto) {
-
-        mostrarPreviewFoto(
-            produto.foto
-        );
-
-        if (fileName) {
-            fileName.textContent =
-                'Imagem atual da peça';
-        }
-
-    } else {
-
-        esconderPreviewFoto();
-    }
+} else {
+    esconderPreviewFoto();
+}
 
 
     const modal =
@@ -844,19 +934,19 @@ function renderProductsTable(produtos) {
             `;
         }
 
-        const foto = prod.foto
-            ? `
-                <img
-                    src="${escapeHtml(prod.foto)}"
-                    alt="Foto da peça"
-                    class="product-table-photo"
-                >
-            `
-            : `
-                <div class="product-table-photo-placeholder">
-                    <i data-lucide="image"></i>
-                </div>
-            `;
+    const foto = prod.foto_url
+        ? `
+            <img
+                src="${escapeHtml(prod.foto_url)}"
+                alt="Foto da peça"
+                class="product-table-photo"
+            >
+        `
+        : `
+            <div class="product-table-photo-placeholder">
+                <i data-lucide="image"></i>
+            </div>
+        `;
 
         const tr = document.createElement('tr');
 
@@ -1039,28 +1129,23 @@ function viewProduct(id) {
 
     }
 
-    const foto = produto.foto
-        ? `
-            <div class="product-details-photo">
-
-                <img
-                    src="${escapeHtml(produto.foto)}"
-                    alt="Foto da peça"
-                >
-
-            </div>
-        `
-        : `
-            <div class="product-details-photo">
-
-                <i data-lucide="image"></i>
-
-                <span>
-                    Sem foto cadastrada
-                </span>
-
-            </div>
-        `;
+const foto = produto.foto_url
+    ? `
+        <div class="product-details-photo">
+            <img
+                src="${escapeHtml(produto.foto_url)}"
+                alt="Foto da peça"
+            >
+        </div>
+    `
+    : `
+        <div class="product-details-photo">
+            <i data-lucide="image"></i>
+            <span>
+                Sem foto cadastrada
+            </span>
+        </div>
+    `;
 
     const conteudo = document.getElementById(
         'detalhesProdutoConteudo'
