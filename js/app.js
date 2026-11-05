@@ -97,9 +97,10 @@ async function loadDataFromSupabase() {
     }
 
     // Busca produtos
-    const { data: produtos, error: errProdutos } = await db
+const { data: produtos, error: errProdutos } = await db
     .from('produtos')
-    .select('id, created_at, nome, codigo, localizacao, quantidade, estoque_min, preco_custo, preco_venda, marca_carro, ano_carro, cor_peca');
+    .select('id, created_at, nome, codigo, localizacao, quantidade, estoque_min, preco_custo, preco_venda, marca_carro, ano_carro, cor_peca')
+    .order('created_at', { ascending: false });
 
     if (errProdutos) console.warn('Aviso produtos:', errProdutos.message);
 
@@ -776,6 +777,8 @@ function closeProductModal() {
 function renderProductsTable(produtos) {
 
     const listaProdutos = produtos || [];
+
+    produtosCache = listaProdutos;
 
     const tbody = document.getElementById(
         'tableEstoqueBody'
