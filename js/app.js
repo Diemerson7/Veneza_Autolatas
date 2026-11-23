@@ -540,7 +540,7 @@ function renderProductsTable(produtos) {
                     </div>
                 </div>
             </td>
-            <td><span class="code-badge">${escapeHtml(prod.codigo || '-')}</span></td>
+            <td><span class="code-badge">${escapeHtml(prod.ano_carro || '-')}</span></td>
             <td>
                 <span class="location-badge">
                     <i data-lucide="map-pin"></i>
